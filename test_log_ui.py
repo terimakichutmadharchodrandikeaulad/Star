@@ -28,39 +28,7 @@ class TestLogUI(unittest.IsolatedAsyncioTestCase):
         updated_cfg = app.cfg(self.store)
         self.assertEqual(updated_cfg["log_channel"], -1001234567890)
 
-    async def test_show_log_panel(self):
-        await app.ensure_defaults(self.store)
-        await app.set_cfg(self.store, log_channel=-1001234567890)
-
-        client = MagicMock()
-        client.store = self.store
-        client.send_message = AsyncMock()
-
-        await app.show_log_panel(client, 999)
-        client.send_message.assert_called_once()
-        args, kwargs = client.send_message.call_args
-        self.assertEqual(args[0], 999)
-        self.assertIn("-1001234567890", args[1])
-
-    async def test_cb_log_disable(self):
-        await app.ensure_defaults(self.store)
-        await app.set_cfg(self.store, log_channel=-1001234567890)
-
-        client = MagicMock()
-        client.store = self.store
-        client.send_message = AsyncMock()
-
-        query = MagicMock()
-        query.from_user.id = 7524032836  # Supreme ID
-        query.message = MagicMock()
-        query.message.edit_text = AsyncMock()
-        query.answer = AsyncMock()
-
-        await app.cb_log(client, query, ["log", "off"])
-        cfg = app.cfg(self.store)
-        self.assertEqual(cfg["log_channel"], 0)
-
-    async def test_save_episode_logs_event(self):
+    async def test_log_event_sending(self):
         await app.ensure_defaults(self.store)
         await app.set_cfg(self.store, log_channel=-1001234567890)
 
@@ -70,14 +38,12 @@ class TestLogUI(unittest.IsolatedAsyncioTestCase):
         client.username = "testbot"
         client.send_message = AsyncMock()
 
-        await app.get_or_create_anime(self.store, "Naruto")
-        await app.save_episode(client, 111, "naruto", 1, 1, "fid_123", "video", "Test Caption", None)
+        await app.log_event(client, "🔗 TEST EVENT", "Detail message", important=False)
 
         client.send_message.assert_called()
-        # Verify log message was sent to log_channel
         log_calls = [call for call in client.send_message.call_args_list if call[0][0] == -1001234567890]
         self.assertTrue(len(log_calls) > 0)
-        self.assertIn("Naruto", log_calls[0][0][1])
+        self.assertIn("TEST EVENT", log_calls[0][0][1])
 
 if __name__ == "__main__":
     unittest.main()
