@@ -1,157 +1,132 @@
-# 🎬 Telegram Anime Provider Bot Factory
+# 🔗 Telegram Link Provider Bot System
 
-Production-ready, asynchronous, scalable **Telegram Anime Provider Bot Factory** built with **Python 3.11+**, **Pyrogram**, **TgCrypto**, and an ultra-fast **JSON Database Engine**.
+Production-ready, asynchronous, highly scalable **Telegram Link Provider Bot** built with **Python 3.11+**, **Pyrogram**, **TgCrypto**, and an ultra-fast **JSON Database Engine**.
 
 ---
 
 ## ✨ Features
 
-- 🏭 **Bot Cloning Engine (`/clone`)**: Users can clone their own isolated Anime Provider Bot in seconds via `@BotFather` token.
-- 🔐 **Encrypted Token Storage**: Bot tokens are encrypted using **Fernet** cryptography before being saved to database. No plaintext tokens!
-- 🔍 **Flexible Filter & Episode Search**: Supports exact `S1 E4` / `Season 1 Episode 4` / `1x4` queries, single season/episode numbers, and flexible keyword search across captions.
-- 🎨 **Small Caps & Colorful UI**: Visually polished inline keyboards and messages formatted with small caps typography (`ᴀʙᴄᴅᴇ...`) and bright emojis.
-- 🤖 **Auto Bot Commands**: Automatically sets Telegram bot commands (`SetBotCommands`) for user and admin scopes on Factory and Cloned bots.
-- 🔐 **Force Subscribe (`/setfs`)**: Supports **Public Channels** (membership check) and **Private Channels** (auto-approving join requests).
-- 🏷️ **Upload System (`/upload`)**: Single episode upload or batch season upload (`/done`, `/cancel`).
-- ✏️ **Edit & Delete System (`/edit`, `/delete`)**: Instantly update video files, captions, thumbnails, or remove episodes without bot restarts.
-- 📣 **Broadcast System (`/broadcast`)**: Progress tracking, FloodWait retry, and global broadcast capabilities for Supreme Developers (`/broadcast all`).
-- 📊 **Statistics & Admin Panel (`/stats`, `/admin`)**: Detailed analytics, database sizes, uptime, and interactive permission selector (`/giveadmin`, `/editadmin`, `/remadmin`).
-- 🎁 **Referral System (`/refer`)**: Unique referral links, conversion tracking, rankings, and referral statistics.
-- 👑 **Supreme Developer Tools (`/supreme`, `/botlist`, `/db`, `/restart`)**: Global access across all cloned instances.
-- 🧹 **Automatic Background Cleanup**: Auto-deletes inactive clones with zero uploaded episodes and <100 users after 3 days.
+- 📢 **Easy Channel Selection Workflow (`/newlink`)**:
+  - Forward a message from your target channel.
+  - Send the channel public username (`@channelname`), URL (`https://t.me/channelname`), or channel ID (`-100...`).
+  - Select from previously saved verified channels in **My Channels**.
+- 🎯 **Three Distinct Delivery Link Modes**:
+  1. **🌐 Public Link**: Delivers the channel's static public URL (`https://t.me/username`).
+  2. **🔒 Private Invite Link**: Generates a Telegram invite link (`creates_join_request=False`) that auto-rotates every 5 minutes.
+  3. **✅ Join Request Link**: Generates a join-request enabled invite link (`creates_join_request=True`) that auto-rotates every 5 minutes.
+- 🔄 **Automatic 5-Minute Link Rotation Service**:
+  - Background rotation service runs every 300 seconds (`LINK_ROTATION_INTERVAL = 300`).
+  - Generates replacement invite links before expiration.
+  - Revokes previous bot-generated invite links via `revokeChatInviteLink`.
+  - Persists rotation lifecycle timestamps (`last_rotation_at`, `next_rotation_at`) across VPS restarts.
+- 🔐 **Admin Isolation & Role-Based Access**:
+  - **Superadmin (Supreme)**: Global oversight, clone management, database health, global broadcast (`/broadcast all`).
+  - **Administrator**: Manage owned provider links, channels, analytics, enable/disable links, and role permissions.
+  - Strict authorization checks on all commands and inline callbacks.
+- 📊 **Comprehensive Analytics & Statistics (`/stats`, `/mylinks`)**:
+  - Provider link total visits, unique visitors, repeat visitors, successful deliveries, and failed deliveries.
+  - Detailed link-level, admin-level, and superadmin global analytics.
+- 🏭 **Bot Cloning Engine (`/clone`)**:
+  - Clone isolated Link Provider Bots instantly via `@BotFather` token.
+  - Bot tokens are encrypted using **Fernet** cryptography before database storage.
+- 🔐 **Force Subscribe Integration (`/setfs`)**:
+  - Supports Public Channels (membership verification) and Private Channels (join request verification).
+- 🧾 **Audit Logging & Activity Tracking**:
+  - Configure log channel ID (`/admin` → Log Channel) to receive live operational logs.
 
 ---
 
 ## 🛠️ Configuration & Installation
 
-Credentials can be set **directly inside `app.py`** (header constants) or passed via environment variables / `.env` file.
+### Environment Variables / `.env` Setup
 
-### Environment Variables / `app.py` Constants
+Copy `.env.example` to `.env` or set environment variables:
+
+```bash
+cp .env.example .env
+```
 
 | Variable | Description |
 | :--- | :--- |
 | `API_ID` | Telegram API ID from [my.telegram.org](https://my.telegram.org) |
 | `API_HASH` | Telegram API Hash from [my.telegram.org](https://my.telegram.org) |
-| `BOT_TOKEN` | Factory Bot Token from [@BotFather](https://t.me/BotFather) |
-| `SUPREME_IDS` | Comma-separated Telegram User IDs for Supreme Developers |
-| `LOG_CHANNEL_ID` | Global developer log channel ID (e.g. `-1001234567890`, optional) |
-| `FACTORY_NAME` | Custom name for your Factory Bot |
+| `BOT_TOKEN` | Main Factory Bot Token from [@BotFather](https://t.me/BotFather) |
+| `SUPREME_IDS` | Comma-separated Telegram User IDs for Supreme Administrators |
+| `LOG_CHANNEL_ID` | Developer log channel ID (optional, 0 = disabled) |
+| `LINK_ROTATION_INTERVAL` | Rotation interval in seconds (default: `300` = 5 minutes) |
+| `FACTORY_NAME` | Custom name for your Link Provider Factory |
 
 ---
 
-## 🤖 BotFather Setup
+## 🤖 BotFather & Channel Permissions Setup
 
-1. Open [@BotFather](https://t.me/BotFather) on Telegram.
-2. Send `/newbot` to create your Main Factory Bot.
-3. Copy the Bot Token provided by BotFather.
-4. Paste the token into `BOT_TOKEN` inside `app.py` or `.env`.
-
----
-
-## 📢 Channel Permissions Setup (For Force Subscribe)
-
-When configuring Force Subscribe (`/setfs`):
-- Add your bot as an **Administrator** in your target channel.
-- Grant permissions: **Invite Users via Link** and **Manage Join Requests** (for private request channels).
+1. Create your main bot with [@BotFather](https://t.me/BotFather) (`/newbot`).
+2. Add your bot as an **Administrator** in your target channels.
+3. Grant permissions:
+   - **Add Members** / **Invite Users via Link**
+   - **Manage Join Requests** (for Join Request link mode)
 
 ---
 
-## 💻 Local Testing
+## 🚀 Commands
 
-1. **Clone & Navigate:**
-   ```bash
-   git clone <repo_url>
-   cd anime-bot-factory
-   ```
+| Command | Description |
+| :--- | :--- |
+| `/start` | Open provider link or view welcome menu |
+| `/help` | View help instructions and command usage |
+| `/refer` | Generate referral link & view referral stats |
+| `/admin` | Open interactive Admin Dashboard |
+| `/newlink` | Start new provider link creation flow |
+| `/mylinks` | View, manage, enable/disable, or delete provider links |
+| `/mychannels` | View, add, and revalidate target channels |
+| `/stats` | View link and administrator analytics |
+| `/rotation` | Inspect active 5-minute invite link rotation status |
+| `/cancel` | Cancel active conversation or input state |
+| `/clone` | Create your own cloned Link Provider Bot |
+| `/supreme` | Supreme control panel (Superadmin only) |
+| `/botlist` | List all cloned instances (Superadmin only) |
+| `/db` | Database health and statistics (Superadmin only) |
+| `/restart` | Gracefully restart clones (Superadmin only) |
 
-2. **Install Dependencies:**
+---
+
+## 💻 Local Testing & Running
+
+1. **Install Dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure Credentials:**
-   Edit constants in `app.py` or create `.env`:
+2. **Run Unit Tests:**
    ```bash
-   cp .env.example .env
+   python3 -m unittest discover
    ```
 
-4. **Run Bot:**
+3. **Start Bot:**
    ```bash
-   python app.py
+   python3 app.py
    # or
-   python main.py
+   python3 main.py
    ```
 
 ---
 
-## 🚀 Deployment Guides
-
-### 1. Render Deployment
-
-1. Create a new **Background Worker** on [Render.com](https://render.com).
-2. Connect your GitHub repository.
-3. Set **Runtime** to `Python 3`.
-4. Set **Build Command**: `pip install -r requirements.txt`
-5. Set **Start Command**: `python app.py`
-6. Add Environment Variables in Render dashboard (`API_ID`, `API_HASH`, `BOT_TOKEN`, `SUPREME_IDS`).
-7. Click **Deploy**.
-
----
-
-### 2. Railway Deployment
-
-1. Create a new project on [Railway.app](https://railway.app).
-2. Deploy from GitHub Repo.
-3. Add environment variables in Railway settings tab.
-4. Railway will automatically detect `Procfile` and deploy `python app.py`.
-
----
-
-### 3. Koyeb Deployment
-
-1. Create a new app on [Koyeb.com](https://koyeb.com).
-2. Select GitHub as source.
-3. Set **Build command**: `pip install -r requirements.txt`
-4. Set **Run command**: `python app.py`
-5. Set Environment Variables (`API_ID`, `API_HASH`, `BOT_TOKEN`, `SUPREME_IDS`).
-6. Deploy service.
-
----
-
-### 4. VPS Deployment (Ubuntu/Debian)
+## 🌐 VPS Deployment Guide (Ubuntu / Debian)
 
 ```bash
-# Update system & install python
+# Update system & install required packages
 sudo apt update && sudo apt install -y python3 python3-pip git screen
 
-# Clone repository
+# Clone repository & navigate
 git clone <repo_url>
-cd anime-bot-factory
+cd link-provider-bot
 
 # Install requirements
 pip3 install -r requirements.txt
 
-# Run inside screen session
-screen -S animebot
+# Run inside a detached screen session
+screen -S linkbot
 python3 app.py
-```
-
----
-
-### 5. Termux Deployment (Android)
-
-```bash
-# Update packages
-pkg update && pkg upgrade -y
-pkg install python git -y
-
-# Clone repo & install dependencies
-git clone <repo_url>
-cd anime-bot-factory
-pip install -r requirements.txt
-
-# Start Bot
-python app.py
 ```
 
 ---
